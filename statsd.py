@@ -2,7 +2,7 @@
 DogStatsd is a Python client for DogStatsd, a Statsd fork for Datadog.
 """
 
-import logging
+from twisted.python import log
 from random import random
 from time import time
 import socket
@@ -11,9 +11,6 @@ try:
     from itertools import imap
 except ImportError:
     imap = map
-
-
-log = logging.getLogger('dogstatsd')
 
 
 class DogStatsd(object):
@@ -40,6 +37,7 @@ class DogStatsd(object):
         self._port = int(port)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.connect((self._host, self._port))
+        self.socket.setblocking(0)  # Set to non-blocking mode
 
     def gauge(self, metric, value, tags=None, sample_rate=1):
         """
@@ -113,7 +111,7 @@ class DogStatsd(object):
                 self.timing(metric, time() - start, tags=tags, sample_rate=sample_rate)
                 return result
             wrapped.__name__ = func.__name__
-            wrapped.__doc__  = func.__doc__
+            wrapped.__doc__ = func.__doc__
             wrapped.__dict__.update(func.__dict__)
             return wrapped
         return wrapper
@@ -139,7 +137,7 @@ class DogStatsd(object):
         try:
             self.socket.send("".join(imap(str, payload)))
         except socket.error:
-            log.exception("Error submitting metric")
+            log.err()
 
 
 statsd = DogStatsd()
