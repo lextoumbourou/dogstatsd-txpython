@@ -27,7 +27,6 @@ class DogStatsd(object):
         self._host = None
         self._port = None
         self.socket = None
-        self.connect(host, port)
 
     def connect(self, host, port):
         """
@@ -105,11 +104,12 @@ class DogStatsd(object):
                 statsd.timing('user.query.time', time.time() - start)
         """
         def wrapper(func):
+            @defer.inlineCallbakcs
             def wrapped(*args, **kwargs):
                 start = time()
-                result = func(*args, **kwargs)
+                result = yield func(*args, **kwargs)
                 self.timing(metric, time() - start, tags=tags, sample_rate=sample_rate)
-                return result
+                defer.returnValue(result)
             wrapped.__name__ = func.__name__
             wrapped.__doc__ = func.__doc__
             wrapped.__dict__.update(func.__dict__)
@@ -134,10 +134,4 @@ class DogStatsd(object):
         if tags:
             payload.extend(["|#", ",".join(tags)])
 
-        try:
-            self.socket.send("".join(imap(str, payload)))
-        except socket.error:
-            log.err()
-
-
-statsd = DogStatsd()
+        self.socket.send("".join(imap(str, payload)))
